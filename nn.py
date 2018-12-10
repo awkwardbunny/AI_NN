@@ -6,7 +6,7 @@ import argparse
 from recordtype import recordtype
 
 Link = recordtype('Link', "weight f t")
-Node = recordtype('Node', "input activation delta")
+Node = recordtype('Node', "sum output")
 
 class NeuralNet:
 
@@ -16,39 +16,38 @@ class NeuralNet:
 
     def load(self, input_fn):
         print('Loading NN from "{}"'.format(input_fn))
-
         with open(input_fn, 'r') as inf:
             self.nums = [int(i) for i in inf.readline().split()]
-            
-            n = Node(0, 0, 0)
-            self.Nodes = [None]*sum(self.nums)
+            self.Nodes = [None]*(sum(self.nums)+1) # +1 for constant 1 node of bias
+            self.Links = [None]*((self.nums[0] + self.nums[2]) * self.nums[1] + self.nums[1] + 1) # nums[2]+1 for bias links
 
-            l = Link(0, 0, 0)
-            self.Links = [None]*((self.nums[0] + self.nums[2]) * self.nums[1])
+            # Add bias node (constant output 1 at the end of the list)
+            self.Nodes[-1] = Node(-1, 1)
 
-            print("THere are {} links".format(len(self.Links)))
+            # Populate input nodes
+            for i in range(self.nums[0]):
+                self.Nodes[i] = Node(-1, 0)
 
+            # Populate hidden nodes and input/hidden links
             for i in range(self.nums[1]):
                 line = [float(j) for j in inf.readline().split()]
                 bias = line[0]
                 weights = line[1:]
-                #print(bias, weights)
 
-                for j in range(len(weights)):
-                    self.Links[j+i*self.nums[0]] = Link(weights[j], j, i+self.nums[0])
-                    print("from {} to {} with weight {}".format(j, i+self.nums[0], weights[j]))
+                self.Nodes[i+self.nums[0]] = Node(0, 0) # add current node
+                self.Links[i*(self.nums[0]+1)] = Link(bias, -1, i+self.nums[0]) # bias node link
+                for j in range(self.nums[0]): # links
+                    self.Links[j+i*(self.nums[0]+1)+1] = Link(weights[j], j, i+self.nums[0])
 
             for i in range(self.nums[2]):
                 line = [float(j) for j in inf.readline().split()]
                 bias = line[0]
                 weights = line[1:]
-                #print(bias, weights)
 
-                for j in range(len(weights)):
-                    self.Links[j+i+(self.nums[1]*self.nums[0])] = Link(weights[j], j+self.nums[0], i+self.nums[0]+self.nums[1])
-                    print("from {} to {} with weight {}".format(j+self.nums[0], i+self.nums[0]+self.nums[1], weights[j]))
-
-            print(self.Links)
+                self.Nodes[i+self.nums[0]+self.nums[1]] = Node(0, 0) # add current node
+                self.Links[(i+1)*((self.nums[0]+1)*self.nums[1])] = Link(bias, -1, i+self.nums[0]+self.nums[1]) # bias node link
+                for j in range(len(weights)): # links
+                    self.Links[j+(i+1)*(self.nums[1]*(self.nums[0]+1))+1] = Link(weights[j], j+self.nums[0], i+self.nums[0]+self.nums[1])
 
     def save(self, output_fn):
         print('Saving NN to "{}"'.format(output_fn))
