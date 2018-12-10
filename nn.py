@@ -19,7 +19,7 @@ class NeuralNet:
         with open(input_fn, 'r') as inf:
             self.nums = [int(i) for i in inf.readline().split()]
             self.Nodes = [None]*(sum(self.nums)+1) # +1 for constant 1 node of bias
-            self.Links = [None]*((self.nums[0] + self.nums[2]) * self.nums[1] + self.nums[1] + 1) # nums[2]+1 for bias links
+            self.Links = [None]*((self.nums[0] + self.nums[2]) * self.nums[1] + self.nums[1] + self.nums[2]) # nums[1]+nums[2] for bias links
 
             # Add bias node (constant output 1 at the end of the list)
             self.Nodes[-1] = Node(-1, 1)
@@ -45,9 +45,9 @@ class NeuralNet:
                 weights = line[1:]
 
                 self.Nodes[i+self.nums[0]+self.nums[1]] = Node(0, 0) # add current node
-                self.Links[(i+1)*((self.nums[0]+1)*self.nums[1])] = Link(bias, -1, i+self.nums[0]+self.nums[1]) # bias node link
+                self.Links[i*(self.nums[1]+1)+(self.nums[1]*(self.nums[0]+1))] = Link(bias, -1, i+self.nums[0]+self.nums[1]) # bias node link
                 for j in range(len(weights)): # links
-                    self.Links[j+(i+1)*(self.nums[1]*(self.nums[0]+1))+1] = Link(weights[j], j+self.nums[0], i+self.nums[0]+self.nums[1])
+                    self.Links[i*(self.nums[1]+1)+(self.nums[1]*(self.nums[0]+1))+j+1] = Link(weights[j], j+self.nums[0], i+self.nums[0]+self.nums[1])
 
     def save(self, output_fn):
         print('Saving NN to "{}"'.format(output_fn))
@@ -61,8 +61,8 @@ class NeuralNet:
     
             for x in range(self.nums[2]):
                 outf.write(' '.join(['{:.3f}'.format(self.Links[i].weight) for i in range(
-                    (self.nums[0]*self.nums[1]+self.nums[1])*(x+1),
-                    (self.nums[0]*self.nums[1]+self.nums[1])*(x+1)+self.nums[1]+1
+                    (self.nums[0]*self.nums[1]+self.nums[1])+x*(self.nums[1]+1),
+                    (self.nums[0]*self.nums[1]+self.nums[1])+(x+1)*(self.nums[1]+1)
                     )]))
                 outf.write('\n')
     
