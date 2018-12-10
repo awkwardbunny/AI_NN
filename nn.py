@@ -4,6 +4,7 @@ import sys
 import argparse
 #from collections import namedtuple
 from recordtype import recordtype
+import math
 
 Link = recordtype('Link', "weight f t")
 Node = recordtype('Node', "sum output")
@@ -66,8 +67,111 @@ class NeuralNet:
                     )]))
                 outf.write('\n')
     
+    def sigmoid(self, x):
+        return 1.0 / (1.0 + math.exp(-x))
+
+
+    def go(self, data):
+        range_i_nodes = range(0,self.nums[0])
+        range_h_nodes = range(self.nums[0],self.nums[0]+self.nums[1])
+        range_o_nodes = range(self.nums[0]+self.nums[1],self.nums[0]+self.nums[1]+self.nums[2])
+        idx_i_nodes = [i for i in range_i_nodes]
+        idx_h_nodes = [i for i in range_h_nodes]
+        idx_o_nodes = [i for i in range_o_nodes]
+
+        range_i_links = range(0,(self.nums[0]+1)*self.nums[1])
+        range_h_links = range((self.nums[0]+1)*self.nums[1], len(self.Links))
+        idx_i_links = [i for i in range_i_links]
+        idx_h_links = [i for i in range_h_links]
+
+        #print(idx_i_nodes)
+        #print(idx_h_nodes)
+        #print(idx_o_nodes)
+        #
+        #print(idx_i_links)
+        #print(idx_h_links)
+
+        ########################################
+
+        # Enter values into input nodes
+        for i in range(self.nums[0]):
+            self.Nodes[i].output = data[i]
+        for n in self.Nodes[self.nums[0]:-1]:
+            n.sum = 0
+            n.output = 0
+
+        # Propagate forward (input->hidden)
+        #print("From {} to {}".format(0,idx_i_links[-1]+1))
+        for l in self.Links[:idx_i_links[-1]+1]:
+            self.Nodes[l.t].sum = self.Nodes[l.t].sum + (self.Nodes[l.f].output * l.weight)
+        #print("From {} to {}".format(self.nums[0],self.nums[0]+self.nums[1]))
+        for n in self.Nodes[self.nums[0]:self.nums[0]+self.nums[1]]:
+            n.output = self.sigmoid(n.sum)
+
+        #print(self.Nodes)
+        #print("====================================================================")
+
+        # Propagate forward (hidden->output)
+        #print("From {} to {}".format((self.nums[0]+1)*self.nums[1],(self.nums[0]+1)*self.nums[1]+(self.nums[1]+1)*self.nums[2]))
+        for l in self.Links[(self.nums[0]+1)*self.nums[1]:(self.nums[0]+1)*self.nums[1]+(self.nums[1]+1)*self.nums[2]]:
+            self.Nodes[l.t].sum = self.Nodes[l.t].sum + (self.Nodes[l.f].output * l.weight)
+            #print("F:{} T:{} W:{}*{}".format(l.f, l.t, l.weight, self.Nodes[l.f].output))
+        #print("From {} to {}".format(self.nums[0]+self.nums[1],self.nums[0]+self.nums[1]+self.nums[2]))
+        for n in self.Nodes[self.nums[0]+self.nums[1]:self.nums[0]+self.nums[1]+self.nums[2]]:
+            n.output = self.sigmoid(n.sum)
+
+        #for c in range(len(self.Nodes)):
+        #    print("{}: {}".format(c, self.Nodes[c]))
+        ###print("====================================================================")
+        #for c in range(len(self.Links)):
+        #    print("{}: {}".format(c, self.Links[c]))
+
+
+        return [self.Nodes[-1-x].output for x in range(self.nums[2], 0, -1)]
+
     def test(self, data_input_fn, output_fn):
         print('Testing NN from "{}" dataset and saving output to "{}"'.format(data_input_fn, output_fn))
+        A = 0
+        B = 0
+        C = 0
+        D = 0
+        with open(data_input_fn, "r") as inf:
+            with open(output_fn, "w") as outf:
+                nums = [int(i) for i in inf.readline().split()]
+                for i in range(nums[0]):
+                #for i in range(1):
+                    line = [float(i) for i in inf.readline().split()]
+                    exp = line[-1]
+                    pred = self.go(line[:-1])
+
+                    #for h in range(len(pred)):
+                    #    if(pred[h] > 0.5):
+                    #        pred[h] = 1
+                    #    else:
+                    #        pred[h] = 0
+                    print(pred)
+
+               #     for j in pred:
+               #         if j > 0.5 and exp == 1:
+               #             A = A+1
+               #         elif j > 0.5:
+               #             B = B+1
+               #         elif j < 0.5 and exp == 1:
+               #             C = C+1
+               #         else:
+               #             D = D+1
+
+               # A = A+1
+               # B = B+1
+               # C = C-1
+               # D = D-1
+               # E = (A+D)/(A+B+C+D)
+               # F = A/(A+B)
+               # G = A/(A+C)
+               # H = (2*F*G)/(F+G)
+               #    
+               # print("{} {} {} {} {:.3f} {:.3f} {:.3f} {:.3f}".format(A, B, C, D, E, F, G, H))
+
 
     def train(self, data_input_fn, rate, epochs):
         print('Training NN from "{}" dataset at {} rate for {} iterations'.format(data_input_fn, rate, epochs))
