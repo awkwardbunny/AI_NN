@@ -51,8 +51,21 @@ class NeuralNet:
 
     def save(self, output_fn):
         print('Saving NN to "{}"'.format(output_fn))
-        #print(self.nums)
+        with open(output_fn, 'w') as outf:
+            outf.write(' '.join(str(x) for x in self.nums))
+            outf.write('\n')
 
+            for x in range(self.nums[1]):
+                outf.write(' '.join(['{:.3f}'.format(self.Links[i].weight) for i in range((self.nums[0]+1)*x,(self.nums[0]+1)*(x+1))]))
+                outf.write('\n')
+    
+            for x in range(self.nums[2]):
+                outf.write(' '.join(['{:.3f}'.format(self.Links[i].weight) for i in range(
+                    (self.nums[0]*self.nums[1]+self.nums[1])*(x+1),
+                    (self.nums[0]*self.nums[1]+self.nums[1])*(x+1)+self.nums[1]+1
+                    )]))
+                outf.write('\n')
+    
     def test(self, data_input_fn, output_fn):
         print('Testing NN from "{}" dataset and saving output to "{}"'.format(data_input_fn, output_fn))
 
