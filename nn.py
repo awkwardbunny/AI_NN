@@ -40,6 +40,7 @@ class NeuralNet:
                 for j in range(self.nums[0]): # links
                     self.Links[j+i*(self.nums[0]+1)+1] = Link(weights[j], j, i+self.nums[0])
 
+            # Populate output nodes and hidden/output links
             for i in range(self.nums[2]):
                 line = [float(j) for j in inf.readline().split()]
                 bias = line[0]
@@ -56,6 +57,7 @@ class NeuralNet:
             outf.write(' '.join(str(x) for x in self.nums))
             outf.write('\n')
 
+            # This is just load() in reverse
             for x in range(self.nums[1]):
                 outf.write(' '.join(['{:.3f}'.format(self.Links[i].weight) for i in range((self.nums[0]+1)*x,(self.nums[0]+1)*(x+1))]))
                 outf.write('\n')
@@ -70,8 +72,9 @@ class NeuralNet:
     def sigmoid(self, x):
         return 1.0 / (1.0 + math.exp(-x))
 
-
     def go(self, data):
+        # Thought it'd be useful to pre-calculate the indices for nodes and links
+        ########################################
         range_i_nodes = range(0,self.nums[0])
         range_h_nodes = range(self.nums[0],self.nums[0]+self.nums[1])
         range_o_nodes = range(self.nums[0]+self.nums[1],self.nums[0]+self.nums[1]+self.nums[2])
@@ -113,46 +116,71 @@ class NeuralNet:
 
     def test(self, data_input_fn, output_fn):
         print('Testing NN from "{}" dataset and saving output to "{}"'.format(data_input_fn, output_fn))
-        A = 0
-        B = 0
-        C = 0
-        D = 0
+        A = [0]*self.nums[2]
+        B = [0]*self.nums[2]
+        C = [0]*self.nums[2]
+        D = [0]*self.nums[2]
         with open(data_input_fn, "r") as inf:
             with open(output_fn, "w") as outf:
                 nums = [int(i) for i in inf.readline().split()]
                 for i in range(nums[0]):
-                #for i in range(1):
-                    line = [float(i) for i in inf.readline().split()]
-                    exp = line[-1]
-                    pred = self.go(line[:-1])
+                    # Get line and parse data
+                    line = [float(j) for j in inf.readline().split()]
+                    exp = [int(j) for j in line[-nums[2]:]]
+                    data = line[:-nums[2]]
 
-                    #for h in range(len(pred)):
-                    #    if(pred[h] > 0.5):
-                    #        pred[h] = 1
-                    #    else:
-                    #        pred[h] = 0
-                    print(pred)
+                    # Forward propagation
+                    pred = self.go(data)
 
-               #     for j in pred:
-               #         if j > 0.5 and exp == 1:
-               #             A = A+1
-               #         elif j > 0.5:
-               #             B = B+1
-               #         elif j < 0.5 and exp == 1:
-               #             C = C+1
-               #         else:
-               #             D = D+1
+                    # Compare results
+                    for h in range(len(pred)):
+                        if pred[h] > 0.5 and exp[h] == 1:
+                            pred[h] = 1
+                            A[h] = A[h]+1
+                        elif pred[h] > 0.5:
+                            pred[h] = 1
+                            B[h] = B[h]+1
+                        elif pred[h] < 0.5 and exp[h] == 1:
+                            pred[h] = 0
+                            C[h] = C[h]+1
+                        else:
+                            pred[h] = 0
+                            D[h] = D[h]+1
 
-               # A = A+1
-               # B = B+1
-               # C = C-1
-               # D = D-1
-               # E = (A+D)/(A+B+C+D)
-               # F = A/(A+B)
-               # G = A/(A+C)
-               # H = (2*F*G)/(F+G)
-               #    
-               # print("{} {} {} {} {:.3f} {:.3f} {:.3f} {:.3f}".format(A, B, C, D, E, F, G, H))
+                    #print(exp,pred,exp==pred)
+
+                # Calculate performance metrics
+                E = [(a+d)/(a+b+c+d) for (a,b,c,d) in zip(A,B,C,D)]
+                F = [a/(a+b) for (a,b) in zip(A,B)]
+                G = [a/(a+c) for (a,c) in zip(A,C)]
+                H = [(2*f*g)/(f+g) for (f,g) in zip(F,G)]
+
+                # Print out first N_o lines
+                for x in range(nums[2]):
+                    outf.write("{} {} {} {} {:.3f} {:.3f} {:.3f} {:.3f}\n".format(A[x], B[x], C[x], D[x], E[x], F[x], G[x], H[x]))
+
+                # Print out micro & macro average
+                if nums[2] == 1:
+                    outf.write("{:.3f} {:.3f} {:.3f} {:.3f}\n".format(E[0], F[0], G[0], H[0]))
+                    outf.write("{:.3f} {:.3f} {:.3f} {:.3f}\n".format(E[0], F[0], G[0], H[0]))
+                else:
+                    # Calculate micro-avg
+                    SA = sum(A)
+                    SB = sum(B)
+                    SC = sum(C)
+                    SD = sum(D)
+                    uE = (SA+SD)/(SA+SB+SC+SD)
+                    uF = SA/(SA+SB)
+                    uG = SA/(SA+SC)
+                    uH = (2*uF*uG)/(uF+uG)
+                    outf.write("{:.3f} {:.3f} {:.3f} {:.3f}\n".format(uE, uF, uG, uH))
+
+                    # Calculate macro-avg
+                    ME = sum(E)/nums[2]
+                    MF = sum(F)/nums[2]
+                    MG = sum(G)/nums[2]
+                    MH = (2*MF*MG)/(MF+MG)
+                    outf.write("{:.3f} {:.3f} {:.3f} {:.3f}\n".format(ME, MF, MG, MH))
 
 
     def train(self, data_input_fn, rate, epochs):
