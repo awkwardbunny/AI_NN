@@ -23,7 +23,7 @@ class NeuralNet:
             self.Links = [None]*((self.nums[0] + self.nums[2]) * self.nums[1] + self.nums[1] + self.nums[2]) # nums[1]+nums[2] for bias links
 
             # Add bias node (constant output 1 at the end of the list)
-            self.Nodes[-1] = Node(-1, 1)
+            self.Nodes[-1] = Node(-1, -1)
 
             # Populate input nodes
             for i in range(self.nums[0]):
