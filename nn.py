@@ -84,49 +84,31 @@ class NeuralNet:
         idx_i_links = [i for i in range_i_links]
         idx_h_links = [i for i in range_h_links]
 
-        #print(idx_i_nodes)
-        #print(idx_h_nodes)
-        #print(idx_o_nodes)
-        #
-        #print(idx_i_links)
-        #print(idx_h_links)
-
         ########################################
 
         # Enter values into input nodes
         for i in range(self.nums[0]):
             self.Nodes[i].output = data[i]
+        # (Re)Set all other nodes' sum and output
         for n in self.Nodes[self.nums[0]:-1]:
             n.sum = 0
             n.output = 0
 
         # Propagate forward (input->hidden)
-        #print("From {} to {}".format(0,idx_i_links[-1]+1))
         for l in self.Links[:idx_i_links[-1]+1]:
             self.Nodes[l.t].sum = self.Nodes[l.t].sum + (self.Nodes[l.f].output * l.weight)
-        #print("From {} to {}".format(self.nums[0],self.nums[0]+self.nums[1]))
+        # Process activation
         for n in self.Nodes[self.nums[0]:self.nums[0]+self.nums[1]]:
             n.output = self.sigmoid(n.sum)
 
-        #print(self.Nodes)
-        #print("====================================================================")
-
         # Propagate forward (hidden->output)
-        #print("From {} to {}".format((self.nums[0]+1)*self.nums[1],(self.nums[0]+1)*self.nums[1]+(self.nums[1]+1)*self.nums[2]))
         for l in self.Links[(self.nums[0]+1)*self.nums[1]:(self.nums[0]+1)*self.nums[1]+(self.nums[1]+1)*self.nums[2]]:
             self.Nodes[l.t].sum = self.Nodes[l.t].sum + (self.Nodes[l.f].output * l.weight)
-            #print("F:{} T:{} W:{}*{}".format(l.f, l.t, l.weight, self.Nodes[l.f].output))
-        #print("From {} to {}".format(self.nums[0]+self.nums[1],self.nums[0]+self.nums[1]+self.nums[2]))
+        # Process activation
         for n in self.Nodes[self.nums[0]+self.nums[1]:self.nums[0]+self.nums[1]+self.nums[2]]:
             n.output = self.sigmoid(n.sum)
 
-        #for c in range(len(self.Nodes)):
-        #    print("{}: {}".format(c, self.Nodes[c]))
-        ###print("====================================================================")
-        #for c in range(len(self.Links)):
-        #    print("{}: {}".format(c, self.Links[c]))
-
-
+        # Grab the output nodes
         return [self.Nodes[-1-x].output for x in range(self.nums[2], 0, -1)]
 
     def test(self, data_input_fn, output_fn):
