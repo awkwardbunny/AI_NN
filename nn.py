@@ -7,7 +7,7 @@ from recordtype import recordtype
 import math
 
 Link = recordtype('Link', "weight f t")
-Node = recordtype('Node', "sum output")
+Node = recordtype('Node', "sum delta output")
 
 class NeuralNet:
 
@@ -23,11 +23,11 @@ class NeuralNet:
             self.Links = [None]*((self.nums[0] + self.nums[2]) * self.nums[1] + self.nums[1] + self.nums[2]) # nums[1]+nums[2] for bias links
 
             # Add bias node (constant output 1 at the end of the list)
-            self.Nodes[-1] = Node(-1, -1)
+            self.Nodes[-1] = Node(-1, -1, -1)
 
             # Populate input nodes
             for i in range(self.nums[0]):
-                self.Nodes[i] = Node(-1, 0)
+                self.Nodes[i] = Node(-1, 0, 0)
 
             # Populate hidden nodes and input/hidden links
             for i in range(self.nums[1]):
@@ -35,7 +35,7 @@ class NeuralNet:
                 bias = line[0]
                 weights = line[1:]
 
-                self.Nodes[i+self.nums[0]] = Node(0, 0) # add current node
+                self.Nodes[i+self.nums[0]] = Node(0, 0, 0) # add current node
                 self.Links[i*(self.nums[0]+1)] = Link(bias, -1, i+self.nums[0]) # bias node link
                 for j in range(self.nums[0]): # links
                     self.Links[j+i*(self.nums[0]+1)+1] = Link(weights[j], j, i+self.nums[0])
@@ -46,7 +46,7 @@ class NeuralNet:
                 bias = line[0]
                 weights = line[1:]
 
-                self.Nodes[i+self.nums[0]+self.nums[1]] = Node(0, 0) # add current node
+                self.Nodes[i+self.nums[0]+self.nums[1]] = Node(0, 0, 0) # add current node
                 self.Links[i*(self.nums[1]+1)+(self.nums[1]*(self.nums[0]+1))] = Link(bias, -1, i+self.nums[0]+self.nums[1]) # bias node link
                 for j in range(len(weights)): # links
                     self.Links[i*(self.nums[1]+1)+(self.nums[1]*(self.nums[0]+1))+j+1] = Link(weights[j], j+self.nums[0], i+self.nums[0]+self.nums[1])
@@ -72,6 +72,9 @@ class NeuralNet:
     def sigmoid(self, x):
         return 1.0 / (1.0 + math.exp(-x))
 
+    def sigmoid_prime(self, x):
+        return self.sigmoid(x)*(1.0 - self.sigmoid(x))
+
     def go(self, data):
         # Thought it'd be useful to pre-calculate the indices for nodes and links
         ########################################
@@ -92,10 +95,12 @@ class NeuralNet:
         # Enter values into input nodes
         for i in range(self.nums[0]):
             self.Nodes[i].output = data[i]
+            self.Nodes[i].delta = 0
         # (Re)Set all other nodes' sum and output
         for n in self.Nodes[self.nums[0]:-1]:
             n.sum = 0
             n.output = 0
+            n.delta = 0
 
         # Propagate forward (input->hidden)
         for l in self.Links[:idx_i_links[-1]+1]:
@@ -186,13 +191,53 @@ class NeuralNet:
     def train(self, data_input_fn, rate, epochs):
         print('Training NN from "{}" dataset at {} rate for {} iterations'.format(data_input_fn, rate, epochs))
 
+        with open(data_input_fn, "r") as inf:
+            for e in range(epochs):
+                print("Training... ({} epochs)".format(e+1))
+                nums = [int(i) for i in inf.readline().split()]
+                for i in range(nums[0]):
+                    # Get line and parse data
+                    line = [float(j) for j in inf.readline().split()]
+                    exp = [int(j) for j in line[-nums[2]:]]
+                    data = line[:-nums[2]]
+
+                    # Forward propagation
+                    pred = self.go(data)
+                    print(pred,exp)
+
+                    # Backward propagation
+                    y = 0
+                    ## Output layer
+                    for n in [self.Nodes[-1-x] for x in range(self.nums[2], 0, -1)]:
+                        n.delta = self.sigmoid_prime(n.sum) * (exp[y] - n.output)
+                        print(n.sum, self.sigmoid_prime(n.sum), (exp[y] - n.output))
+                        print(n)
+                        y = y+1
+
+                    for d in range(len(self.Nodes)):
+                        print("{}: {}".format(d, self.Nodes[d]))
+
+                    ## Hidden layer
+                    for l in self.Links[(self.nums[0]+1)*self.nums[1]:]:
+                        self.Nodes[l.f].delta = self.Nodes[l.f].delta + self.sigmoid_prime(self.Nodes[l.f].sum)*(l.weight*self.Nodes[l.t].delta)
+
+                    ## Input layer
+                    for l in self.Links[:(self.nums[0]+1)*self.nums[1]]:
+                        self.Nodes[l.f].delta = self.Nodes[l.f].delta + self.sigmoid_prime(self.Nodes[l.f].sum)*(l.weight*self.Nodes[l.t].delta)
+
+                    ### Update all weights
+                    for l in self.Links:
+                        l.weight = l.weight+(rate*self.Nodes[l.t].output*self.Nodes[l.t].delta)
+                inf.seek(0)
+
+
 def train(args):
     #print('Training NN using:\n {} as input\n {} as dataset\n {} as output\n {} learning rate\n {} iterations'
     #        .format(args.inf, args.set, args.out, args.alpha, args.epochs))
 
     nn = NeuralNet()
     nn.load(args.inf)
-    nn.train(args.set, args.alpha, args.epochs)
+    nn.train(args.set, float(args.alpha), int(args.epochs))
     nn.save(args.out)
 
 def test(args):
