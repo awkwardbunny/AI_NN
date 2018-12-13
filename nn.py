@@ -203,31 +203,25 @@ class NeuralNet:
 
                     # Forward propagation
                     pred = self.go(data)
-                    print(pred,exp)
 
                     # Backward propagation
                     y = 0
                     ## Output layer
                     for n in [self.Nodes[-1-x] for x in range(self.nums[2], 0, -1)]:
                         n.delta = self.sigmoid_prime(n.sum) * (exp[y] - n.output)
-                        print(n.sum, self.sigmoid_prime(n.sum), (exp[y] - n.output))
-                        print(n)
                         y = y+1
-
-                    for d in range(len(self.Nodes)):
-                        print("{}: {}".format(d, self.Nodes[d]))
 
                     ## Hidden layer
                     for l in self.Links[(self.nums[0]+1)*self.nums[1]:]:
                         self.Nodes[l.f].delta = self.Nodes[l.f].delta + self.sigmoid_prime(self.Nodes[l.f].sum)*(l.weight*self.Nodes[l.t].delta)
 
                     ## Input layer
-                    for l in self.Links[:(self.nums[0]+1)*self.nums[1]]:
-                        self.Nodes[l.f].delta = self.Nodes[l.f].delta + self.sigmoid_prime(self.Nodes[l.f].sum)*(l.weight*self.Nodes[l.t].delta)
+                    #for l in self.Links[:(self.nums[0]+1)*self.nums[1]]:
+                    #    self.Nodes[l.f].delta = self.Nodes[l.f].delta + self.sigmoid_prime(self.Nodes[l.f].sum)*(l.weight*self.Nodes[l.t].delta)
 
                     ### Update all weights
                     for l in self.Links:
-                        l.weight = l.weight+(rate*self.Nodes[l.t].output*self.Nodes[l.t].delta)
+                        l.weight = l.weight+(rate*self.Nodes[l.f].output*self.Nodes[l.t].delta)
                 inf.seek(0)
 
 
