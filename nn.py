@@ -156,9 +156,47 @@ class NeuralNet:
 
                 # Calculate performance metrics
                 E = [(a+d)/(a+b+c+d) for (a,b,c,d) in zip(A,B,C,D)]
-                F = [a/(a+b) for (a,b) in zip(A,B)]
-                G = [a/(a+c) for (a,c) in zip(A,C)]
-                H = [(2*f*g)/(f+g) for (f,g) in zip(F,G)]
+                try:
+                    F = [a/(a+b) for (a,b) in zip(A,B)]
+                except ZeroDivisionError as e:
+                    print(e)
+                    print("A: {}\nB: {}\nC: {}\nD: {}".format(A, B, C, D))
+                    print("Setting Precision to 0")
+
+                    F = [None]*len(A)
+                    for i in range(len(A)):
+                        if A[i]+B[i] == 0:
+                            F[i] = 0
+                        else:
+                            F[i] = A[i]/(A[i]+B[i])
+
+                try:
+                    G = [a/(a+c) for (a,c) in zip(A,C)]
+                except ZeroDivisionError as e:
+                    print(e)
+                    print("A: {}\nB: {}\nC: {}\nD: {}".format(A, B, C, D))
+                    print("Setting Recall to 0")
+
+                    G = [None]*len(A)
+                    for i in range(len(A)):
+                        if A[i]+C[i] == 0:
+                            G[i] = 0
+                        else:
+                            G[i] = A[i]/(A[i]+C[i])
+
+                try:
+                    H = [(2*f*g)/(f+g) for (f,g) in zip(F,G)]
+                except ZeroDivisionError as e:
+                    print(e)
+                    print("A: {}\nB: {}\nC: {}\nD: {}".format(A, B, C, D))
+                    print("Setting F1 to 0")
+
+                    H = [None]*len(A)
+                    for i in range(len(A)):
+                        if F[i]+G[i] == 0:
+                            H[i] = 0
+                        else:
+                            H[i] = 2*F[i]*G[i]/(F[i]+G[i])
 
                 # Print out first N_o lines
                 for x in range(nums[2]):
